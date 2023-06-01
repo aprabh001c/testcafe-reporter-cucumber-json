@@ -1,8 +1,4 @@
-import { TestRunInfo, BrowserInfo } from './reporter-interface';
-
-export interface MultiBrowserFeatureReport {
-  [userAgent: string]: FeatureReport;
-}
+import { TestRunInfo } from './reporter-interface';
 
 export interface FeatureReport {
   description: string;
@@ -44,10 +40,6 @@ export interface Scenario {
   tags: Tag[];
   type: string;
   uri: string;
-}
-
-export interface MultiBrowserScenario {
-  [userAgent: string]: Scenario;
 }
 
 export interface Step {
@@ -99,8 +91,9 @@ export interface CustomReportData {
 export interface CucumberJsonReportInterface {
   createFeature: (name: string, path: string) => CucumberJsonReportInterface;
   createScenario: (name: string, testRunInfo: TestRunInfo) => CucumberJsonReportInterface;
-  currentFeature: MultiBrowserFeatureReport | undefined;
-  currentScenario: MultiBrowserScenario | undefined;
+  currentFeature: FeatureReport | undefined;
+  currentScenario: Scenario | undefined;
+  currentStep: Step | undefined;
   finalizeWith: (
     endTime: Date,
     passed: number,
@@ -111,30 +104,18 @@ export interface CucumberJsonReportInterface {
     userAgents: string[],
     testCount: number,
   ) => CucumberJsonReportInterface;
-  toJson: (userAgent: string) => string;
-  withBrowserError: (
-    error: string | undefined,
-    userAgent: string,
-  ) => CucumberJsonReportInterface;
-  withBrowserScreenshots: (
-    path: string[] | undefined,
-    userAgent: string,
-  ) => CucumberJsonReportInterface;
-
-  withBrowserInfo: (
-    userAgent: string,
-    browserInfo: BrowserInfo,
-  ) => CucumberJsonReportInterface;
-  writeJsonFiles: () => void;
+  toJson: () => string;
+  withError: (error: string | undefined) => CucumberJsonReportInterface;
+  withScreenshots: (path: string[] | undefined) => CucumberJsonReportInterface;
+  writeFile: () => void;
 }
 
 export interface Metadata {
-  app: AppNameVersion | undefined;
+  app: NameVersion;
   browser: Browser;
+  date: Date;
   device: string;
   platform: Platform;
-  reportTime: Date;
-  startTime: Date;
 }
 export interface Platform {
   name: PlatformName;
@@ -146,18 +127,13 @@ export interface NameVersion {
   version: string;
 }
 
-export interface AppNameVersion {
-  name: string;
-  version?: string;
-}
-
 export interface Browser {
   name: BrowserName;
   version: string;
 }
 
 export type BrowserName =
-  | 'Internet Explorer'
+  | 'internet explorer'
   | 'edge'
   | 'chrome'
   | 'firefox'

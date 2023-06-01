@@ -124,24 +124,15 @@ export const fileExtension = (filePath: string): string => {
   return extension.startsWith('.') ? extension.replace('.', '') : extension;
 };
 
-export const toBase64DataImageUrl = (path: string): string | undefined => {
+export const toBase64DataImageUrl = (path: string): string => {
   const imageType = fileExtension(path);
-  let dataUrl;
-  try {
-    const imageFile = readFileSync(path);
-    const base64Data = imageFile.toString('base64');
-    dataUrl = `data:image/${imageType};base64,${base64Data}`;
-  } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error(`Could not read image file ${path} `, error);
-  }
+  const base64Data = readFileSync(path).toString('base64');
+  const dataUrl = `data:image/${imageType};base64,${base64Data}`;
   return dataUrl;
 };
 
 export const userAgentToFilename = (userAgent: string): string => {
-  const sanitizedUserAgent = userAgent.replace(/\(https:.*\)/gi, '');
-  const filename = sanitizedUserAgent
-    .trim()
+  const filename = userAgent
     .replace(/[\s./:\\]/g, '_')
     .replace(/___/g, '_')
     .replace(/__/g, '_')

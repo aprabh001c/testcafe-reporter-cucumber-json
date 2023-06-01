@@ -7,7 +7,7 @@ import {
 } from './reporter-helpers';
 import { CallsiteError, ExtendedReporterPlugin, TestRunInfo } from './reporter-interface';
 import { filterStackFramesIn, getAllFilesIn, stackFramesOf } from './stack-frames-parser';
-import { removeCommonFirstLines } from './remove-common-first-lines';
+import { getStackTraceHeaderFrom } from './stack-trace-parser';
 import * as chalk from 'chalk';
 
 export const extendedReporterPlugin: ExtendedReporterPlugin = {
@@ -29,38 +29,20 @@ export const extendedReporterPlugin: ExtendedReporterPlugin = {
     testRunInfo: TestRunInfo,
     report: CucumberJsonReportInterface,
   ) {
-    report.createScenario(name, testRunInfo);
+    let formattedErrorMessage: string | undefined;
+    if (Array.isArray(testRunInfo.errs) && testRunInfo.errs.length > 0) {
+      formattedErrorMessage = this.renderErrors(testRunInfo.errs);
+    }
 
-    const browsers = new Set(
-      testRunInfo.browsers.map((browser) => browser.prettyUserAgent),
-    );
+    const screenshots: string[] = [];
+    if (Array.isArray(testRunInfo.screenshots) && testRunInfo.screenshots.length > 0) {
+      testRunInfo.screenshots.forEach((img) => screenshots.push(img.screenshotPath));
+    }
 
-    Array.from(browsers).forEach((browser) => {
-      const browserInfo = testRunInfo.browsers.find(
-        (browserInfo) => browserInfo.prettyUserAgent === browser,
-      );
-      if (!browserInfo) {
-        return;
-      }
-
-      report.withBrowserInfo(browser, browserInfo);
-
-      const testRunId = browserInfo.testRunId;
-      const screenshots = testRunInfo.screenshots
-        .filter((s) => s.testRunId === testRunId)
-        .map((s) => s.screenshotPath);
-      report.withBrowserScreenshots(screenshots, browser);
-
-      const callsiteErrors = (testRunInfo.errs || []).filter(
-        (err) => err.testRunId === testRunId,
-      );
-      if (Array.isArray(callsiteErrors) && callsiteErrors.length === 0) {
-        return;
-      }
-
-      const formattedErrorMessage = this.renderErrors(callsiteErrors);
-      report.withBrowserError(formattedErrorMessage, browser);
-    });
+    report
+      .createScenario(name, testRunInfo)
+      .withError(formattedErrorMessage)
+      .withScreenshots(screenshots);
   },
   reportTaskDone(
     endTime: Date,
@@ -70,9 +52,9 @@ export const extendedReporterPlugin: ExtendedReporterPlugin = {
   ) {
     if (report) {
       report.finalizeWith(endTime, passed, warnings);
-      report.writeJsonFiles();
+      report.writeFile();
+      return;
     }
-    this.write('');
   },
   chalk: chalk.default,
   formatError: (err: CallsiteError, prefix: string) => {
@@ -94,10 +76,10 @@ export const extendedReporterPlugin: ExtendedReporterPlugin = {
     }
 
     const originalStackTraceLimit = Error.stackTraceLimit;
-    Error.stackTraceLimit = 1000;
+    Error.stackTraceLimit = 100;
     const lines: string[] = [];
     errs.map((err, idx) => {
-      const prefix = `${idx + 1}) `;
+      const prefix = this.chalk.red(`${idx + 1}) `);
 
       if (err && typeof err.callsite === 'string') {
         reportUnexpectedErrObject(err);
@@ -114,6 +96,7 @@ export const extendedReporterPlugin: ExtendedReporterPlugin = {
       filterStackFramesIn(err.callsite);
       const originalStackFrames = [...err.callsite.stackFrames];
       const files = getAllFilesIn(err.callsite);
+      let stackTraceHeader: string;
       files.map((filename: string, index: number) => {
         err.callsite.stackFrames = stackFramesOf(filename).in(originalStackFrames);
         err.callsite.filename = filename;
@@ -122,11 +105,15 @@ export const extendedReporterPlugin: ExtendedReporterPlugin = {
 
         if (index === 0) {
           lines.push(stackTrace);
+          stackTraceHeader = getStackTraceHeaderFrom(stackTrace);
           return;
         }
-
-        const additionalStackTrace = removeCommonFirstLines(lines[0], stackTrace);
-        lines.push(additionalStackTrace);
+        if (stackTraceHeader) {
+          const truncatedStackTrace = stackTrace.replace(stackTraceHeader, '');
+          lines.push(truncatedStackTrace);
+          return;
+        }
+        lines.push(stackTrace);
       });
     });
 
@@ -137,8 +124,8 @@ export const extendedReporterPlugin: ExtendedReporterPlugin = {
     let hasShownError = false;
     const lineSeparator = '--------------------------------------------\n';
     return {
-      a: (str: string) => `"${str}"`,
-      'a screenshot-path': (str: string) => str,
+      a: (str: string) => `"${this.chalk.underline(str)}"`,
+      'a screenshot-path': (str: string) => this.chalk.grey.underline(str),
       code: (str: string) => str,
       'div code-frame': (str: string) => str,
       'div code-line': (str: string) => {
@@ -149,29 +136,29 @@ export const extendedReporterPlugin: ExtendedReporterPlugin = {
         return `${str}\n`;
       },
       'div code-line-last': (str: string) => str,
-      'div code-line-num': (str: string) => `   ${str} | `,
+      'div code-line-num': (str: string) => `   ${str} |`,
       'div code-line-num-base': (str: string) => {
         hasShownError = true;
-        return lineSeparator + ` &rarr; ${str} ` + '| ';
+        return lineSeparator + this.chalk.bgRed(` &rarr; ${str} `) + '|';
       },
       'div code-line-src': (str: string) => str,
-      'div message': (str: string) => str,
+      'div message': (str: string) => this.chalk.bold.red(str),
       'div screenshot-info': (str: string) => str,
       'div stack': (str: string) => '\n\n' + str,
       'div stack-line': (str: string) => str + '\n',
       'div stack-line-last': (str: string) => str,
-      'div stack-line-location': (str: string) => ` (${str})`,
-      'div stack-line-name': (str: string) => `   at ${str}`,
-      'span subtitle': (str: string) => `- ${str} -`,
-      'span syntax-comment': (str: string) => str,
-      'span syntax-invalid': (str: string) => str,
-      'span syntax-keyword': (str: string) => str,
-      'span syntax-number': (str: string) => str,
-      'span syntax-punctuator': (str: string) => str,
-      'span syntax-regex': (str: string) => str,
-      'span syntax-string': (str: string) => str,
-      'span user-agent': (str: string) => str,
-      strong: (str: string) => str,
+      'div stack-line-location': (str: string) => ` (${this.chalk.grey.underline(str)})`,
+      'div stack-line-name': (str: string) => `   at ${this.chalk.bold(str)}`,
+      'span subtitle': (str: string) => `- ${this.chalk.bold.red(str)} -`,
+      'span syntax-comment': (str: string) => this.chalk.grey.bold(str),
+      'span syntax-invalid': (str: string) => this.chalk.inverse(str),
+      'span syntax-keyword': (str: string) => this.chalk.cyan(str),
+      'span syntax-number': (str: string) => this.chalk.magenta(str),
+      'span syntax-punctuator': (str: string) => this.chalk.grey(str),
+      'span syntax-regex': (str: string) => this.chalk.magenta(str),
+      'span syntax-string': (str: string) => this.chalk.green(str),
+      'span user-agent': (str: string) => this.chalk.grey(str),
+      strong: (str: string) => this.chalk.bold(str),
     };
   },
 };

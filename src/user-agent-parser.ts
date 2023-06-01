@@ -45,12 +45,6 @@ export function getPlatformFrom(userAgent: string | undefined): Platform {
     };
   }
   const platformInfo = extractNameAndVersion(rawPlatorm);
-  if (isIOS(platformInfo.name)) {
-    return {
-      name: 'ios',
-      version: platformInfo.version,
-    };
-  }
   if (isMacOsX(platformInfo.name)) {
     return {
       name: 'osx',
@@ -66,13 +60,6 @@ export function getPlatformFrom(userAgent: string | undefined): Platform {
   if (isWindows(platformInfo.name)) {
     return {
       name: 'windows',
-      version: platformInfo.version,
-    };
-  }
-
-  if (isAndroid(platformInfo.name)) {
-    return {
-      name: 'android',
       version: platformInfo.version,
     };
   }
@@ -95,8 +82,7 @@ export function getDeviceFrom(userAgent: string | undefined): string {
   if (userAgent === undefined) {
     return 'undefined';
   }
-  const sanitizedUserAgent = userAgent.replace(/\(https:.*\)/gi, '');
-  const parts = sanitizedUserAgent.split('/');
+  const parts = userAgent.split('/');
   if (parts.length <= 1) {
     return 'undefined';
   }
@@ -106,14 +92,6 @@ export function getDeviceFrom(userAgent: string | undefined): string {
   }
   const platformInfo = extractNameAndVersion(rawPlatorm);
   return platformInfo.name;
-}
-
-export function isIOS(platformName: string | undefined): boolean {
-  if (platformName === undefined) {
-    return false;
-  }
-  const result = platformName.toLowerCase().includes('ios');
-  return result;
 }
 
 export function isMacOsX(platformName: string | undefined): boolean {
@@ -139,14 +117,6 @@ export function isWindows(platformName: string | undefined): boolean {
     return false;
   }
   const result = platformName.toLowerCase().includes('windows');
-  return result;
-}
-
-export function isAndroid(platformName: string | undefined): boolean {
-  if (platformName === undefined) {
-    return false;
-  }
-  const result = platformName.toLowerCase().includes('android');
   return result;
 }
 
@@ -232,13 +202,12 @@ export function getBrowserFrom(userAgent: string | undefined): Browser {
 }
 
 export const browserNameMapping: { [index: string]: BrowserName } = {
-  'Internet Explorer': 'Internet Explorer',
   'Microsoft Edge': 'edge',
   Chrome: 'chrome',
   Edge: 'edge',
   Firefox: 'firefox',
   HeadlessChrome: 'chrome',
-  IE: 'Internet Explorer',
+  IE: 'internet explorer',
   Opera: 'opera',
   Safari: 'safari',
 };
