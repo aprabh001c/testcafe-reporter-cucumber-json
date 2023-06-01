@@ -62,9 +62,6 @@
     "ts-node": "8.10.2",
     "typescript": "3.9.7"
   },
-  "peerDependencies": {
-    "testcafe": "1.x"
-  },
   "engines": {
     "vscode": "^1.18.0"
   }
