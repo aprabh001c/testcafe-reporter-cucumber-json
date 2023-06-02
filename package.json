@@ -1,11 +1,11 @@
 {
-  "name": "testcafe-reporter-cucumber-json_v1.4",
+  "name": "testcafe-reporter-cucumber-json_v1.6",
   "version": "6.0.0",
   "description": "Cucumber JSON TestCafe reporter plugin.",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
   "bin": {
-    "testcafe-reporter-cucumber-json": "./bin/testcafe-reporter-cucumber-json.js"
+    "testcafe-reporter-cucumber-json_v1.6": "bin/testcafe-reporter-cucumber-json.js"
   },
   "scripts": {
     "jest--init": "jest --init",

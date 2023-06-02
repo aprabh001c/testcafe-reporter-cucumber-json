@@ -43,13 +43,25 @@ export interface ExtendedReporterPlugin extends ExtendedReporter, ReporterlPlugi
 }
 
 export interface TestRunInfo {
+  browsers: BrowserInfo[];
   durationMs: number;
   screenshotPath: string;
   skipped: boolean;
   errs: CallsiteError[];
   screenshots: Screenshot[];
 }
-
+export interface BrowserInfo {
+  alias: string;
+  engine: unknown;
+  headless: boolean;
+  name: string;
+  os: unknown;
+  platform: string;
+  prettyUserAgent: string;
+  testRunId: string;
+  userAgent: string;
+  version: string;
+}
 export interface Screenshot {
   screenshotPath: string;
   thumbnailPath: string;
